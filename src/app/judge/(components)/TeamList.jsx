@@ -312,6 +312,7 @@ export default function TeamList({ judge, onLogout, autoOpenTeamId }) {
   const [evalTeam, setEvalTeam] = useState(null);
   const [filterBatch, setFilter] = useState("all");
   const [err, setErr] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | pending | done
 
   useEffect(() => {
     (async () => {
