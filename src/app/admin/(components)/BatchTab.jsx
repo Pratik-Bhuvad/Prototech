@@ -12,7 +12,8 @@ import {
     deleteBatch,
 } from "@/lib/db";
 import { validateBatchForm } from "@/lib/validation";
-import { TrashIcon } from "./Icons";
+import { TrashIcon, PrintIcon, QrIcon } from "./Icons";
+import QRModal, { BulkQRModal } from "./Qr";
 
 export default function BatchTab({ judges }) {
     const [batches, setBatches] = useState([]);
@@ -20,6 +21,8 @@ export default function BatchTab({ judges }) {
     const [form, setForm] = useState({ name: "", mode: "serial", selectedTeams: [], serialFrom: "", serialTo: "" });
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
+    const [qrTeam, setQrTeam] = useState(null);
+    const [bulkBatch, setBulkBatch] = useState(null);
 
     // Load batches + teams on mount
     useEffect(() => {
@@ -56,34 +59,35 @@ export default function BatchTab({ judges }) {
     };
 
     const handleCreate = async () => {
-        const e = validate();
+        const teamIds = resolveTeamIds();
+        const e = validateBatchForm(form, teamIds);
         if (Object.keys(e).length) { setErrors(e); return; }
         setSaving(true);
 
-        const teamIds = resolveTeamIds();
         const newBatch = {
             id: `B-${String(batches.length + 1).padStart(3, "0")}`,
             name: form.name.trim(),
             judge_id: null,
         };
-        const { error: bErr } = await supabase.from("batches").insert(newBatch);
-        if (bErr) { setErrors({ name: "Save failed: " + bErr.message }); setSaving(false); return; }
 
-        const { error: tErr, data: tUpdateData } = await supabase
-            .from("teams")
-            .update({ batch_id: newBatch.id })
-            .in("id", teamIds)
-            .select();
+        const { error: bErr } = await createBatch(newBatch);
+        if (bErr) {
+            setErrors({ name: "Save failed: " + bErr.message });
+            setSaving(false);
+            return;
+        }
 
-        console.log("Team update result:", tUpdateData, tErr);
+        const { data: updated, error: tErr } = await updateTeamsBatch(teamIds, newBatch.id);
         if (tErr) {
-            console.error("Failed to assign batch_id to teams:", tErr.message);
             setErrors({ name: "Batch created but team assignment failed: " + tErr.message });
             setSaving(false);
             return;
         }
 
-        const { data: tData } = await supabase.from("teams").select("id,name,batch_id").order("id");
+        console.log("Teams assigned to batch:", updated);
+
+        // Refresh full teams list
+        const { data: tData } = await fetchTeamsWithBatch();
         if (tData) setTeams(tData);
 
         setBatches(p => [...p, newBatch]);
@@ -91,6 +95,8 @@ export default function BatchTab({ judges }) {
         setErrors({});
         setSaving(false);
     };
+
+
     const assignJudge = async (batchId, judgeId) => {
         await assignJudgeToBatch(batchId, judgeId);
         setBatches((p) => p.map((b) => (b.id === batchId ? { ...b, judge_id: judgeId } : b)));
@@ -119,6 +125,8 @@ export default function BatchTab({ judges }) {
         setForm((p) => ({ ...p, [f]: ev.target.value }));
         setErrors((p) => ({ ...p, [f]: "" }));
     };
+
+
 
     return (
         <div className="flex flex-col lg:flex-row gap-6">
@@ -236,19 +244,22 @@ export default function BatchTab({ judges }) {
             </div>
 
             {/* RIGHT - List */}
+            {/* RIGHT - List */}
             <div className="flex-1 min-w-0">
                 <p className="mono text-xs text-gray-400 tracking-widest uppercase mb-4">
                     {batches.length} Batch{batches.length !== 1 ? "es" : ""} in Supabase
                 </p>
+
                 {batches.length === 0 ? (
                     <div className="border-2 border-dashed border-gray-200 py-16 flex flex-col items-center justify-center gap-2">
                         <p className="mono text-xs text-gray-300 tracking-widest uppercase">No batches yet</p>
+                        <p className="mono text-xs text-gray-300">Fill the form and click Create Batch</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
                         {batches.map((b, i) => {
-                            const batchTeams = teams.filter((t) => t.batch_id === b.id);
-                            const assignedJudge = judges.find((j) => j.id === b.judge_id);
+                            const batchTeams = teams.filter(t => t.batch_id === b.id);
+                            const assignedJudge = judges.find(j => j.id === b.judge_id);
 
                             return (
                                 <div
@@ -256,56 +267,67 @@ export default function BatchTab({ judges }) {
                                     className="border border-gray-200 bg-white p-4 hover:border-gray-300 transition-all"
                                     style={{ animation: `fadeUp 0.25s ease ${i * 0.05}s both` }}
                                 >
-                                    {/* Header */}
+                                    {/* Batch header */}
                                     <div className="flex items-center justify-between mb-3">
                                         <div>
                                             <span className="mono text-xs text-gray-300 mr-2">{b.id}</span>
                                             <span className="syne text-sm font-bold text-gray-900">{b.name}</span>
                                         </div>
-                                        <button
-                                            onClick={() => removeBatch(b.id)}
-                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                        >
-                                            <TrashIcon />
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            {/* Bulk QR print button — only if teams exist */}
+                                            {batchTeams.length > 0 && (
+                                                <button
+                                                    onClick={() => setBulkBatch({ batch: b, teams: batchTeams })}
+                                                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                                                    title="Print all QR codes for this batch"
+                                                >
+                                                    <PrintIcon />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => removeBatch(b.id)}
+                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <TrashIcon />
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    {/* Team chips */}
+                                    {/* Team chips — each clickable for individual QR */}
                                     <div className="flex flex-wrap gap-1.5 mb-3 min-h-6">
                                         {batchTeams.length === 0 ? (
                                             <span className="mono text-xs text-gray-300">No teams assigned</span>
                                         ) : (
-                                            batchTeams.map((t) => (
-                                                <span
+                                            batchTeams.map(t => (
+                                                <button
                                                     key={t.id}
-                                                    className="mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5"
+                                                    onClick={() => setQrTeam({ ...t, batch_id: b.id })}
+                                                    className="mono text-xs bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-600 px-2 py-0.5 transition-colors flex items-center gap-1"
+                                                    title="Click to view QR code"
                                                 >
-                                                    {t.id} — {t.name}
-                                                </span>
+                                                    <QrIcon /> {t.id} — {t.name}
+                                                </button>
                                             ))
                                         )}
                                     </div>
 
-                                    {/* Judge assignment */}
+                                    {/* Judge assignment dropdown */}
                                     <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                                        <span className="mono text-xs text-gray-400 tracking-widest uppercase flex-shrink-0">
-                                            Judge
-                                        </span>
+                                        <span className="mono text-xs text-gray-400 tracking-widest uppercase flex-shrink-0">Judge</span>
                                         <select
                                             value={b.judge_id || ""}
-                                            onChange={(e) => assignJudge(b.id, e.target.value)}
+                                            onChange={e => assignJudge(b.id, e.target.value)}
                                             className="flex-1 mono text-xs text-gray-700 border border-gray-200 bg-gray-50 px-2.5 py-1.5 outline-none focus:border-gray-900 transition-colors"
                                         >
                                             <option value="">— Assign a judge —</option>
-                                            {judges.length === 0 ? (
-                                                <option disabled>No judges yet — create in Judges tab</option>
-                                            ) : (
-                                                judges.map((j) => (
+                                            {judges.length === 0
+                                                ? <option disabled>No judges yet — create in Judges tab</option>
+                                                : judges.map(j => (
                                                     <option key={j.id} value={j.id}>
                                                         {j.displayName || j.display_name} (@{j.username})
                                                     </option>
                                                 ))
-                                            )}
+                                            }
                                         </select>
                                         {assignedJudge && (
                                             <span className="mono text-xs text-emerald-600 flex-shrink-0">✓ Assigned</span>
@@ -317,6 +339,24 @@ export default function BatchTab({ judges }) {
                     </div>
                 )}
             </div>
+
+            {/* Individual QR modal */}
+            {qrTeam && (
+                <QRModal
+                    team={qrTeam}
+                    batchName={batches.find(b => b.id === qrTeam.batch_id)?.name || "—"}
+                    onClose={() => setQrTeam(null)}
+                />
+            )}
+
+            {/* Bulk QR modal */}
+            {bulkBatch && (
+                <BulkQRModal
+                    batch={bulkBatch.batch}
+                    teams={bulkBatch.teams}
+                    onClose={() => setBulkBatch(null)}
+                />
+            )}
         </div>
     );
 }

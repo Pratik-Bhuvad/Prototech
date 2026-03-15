@@ -89,6 +89,33 @@ export async function fetchJudgeTeams(judgeId) {
   return { batches, teams: enriched, error: null };
 }
 
+// ── Verify a scanned team belongs to this judge's batches ──
+export async function verifyTeamForJudge(judgeId, teamId) {
+  // Get judge's batch ids
+  const { data: batches, error: bErr } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("judge_id", judgeId);
+
+  if (bErr || !batches?.length) return { allowed: false, reason: "No batches assigned to you." };
+
+  const batchIds = batches.map(b => b.id);
+
+  // Check if team is in one of those batches
+  const { data: team, error: tErr } = await supabase
+    .from("teams")
+    .select("id, name, batch_id")
+    .eq("id", teamId)
+    .in("batch_id", batchIds)
+    .single();
+
+  if (tErr || !team) {
+    return { allowed: false, reason: "This team is not assigned to your batch." };
+  }
+
+  return { allowed: true, reason: null };
+}
+
 // ── Check if judge already submitted evaluation for a team ──
 export async function fetchJudgeEvaluations(judgeId) {
   const { data, error } = await supabase
@@ -99,6 +126,7 @@ export async function fetchJudgeEvaluations(judgeId) {
   if (error) return [];
   return data.map(e => e.team_id);
 }
+
 
 // ── Submit evaluation ──
 export async function submitEvaluation(payload) {

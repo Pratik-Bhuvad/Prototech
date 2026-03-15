@@ -1,6 +1,6 @@
 // components/judge/TeamList.jsx
 import { useState, useEffect } from "react";
-import { fetchJudgeTeams, fetchJudgeEvaluations, submitEvaluation, judgeLogout } from "@/lib/judgeAuth";
+import { fetchJudgeTeams, fetchJudgeEvaluations, submitEvaluation, judgeLogout, verifyTeamForJudge  } from "@/lib/judgeAuth";
 import { EVAL_CATEGORIES, TOTAL_MAX } from "@/lib/constants";
 
 // ── Score input row ──
@@ -55,10 +55,10 @@ function ScoreRow({ cat, value, onChange, error }) {
 // ── Eval form modal ──
 function EvalModal({ team, judge, onClose, onSaved }) {
   const blank = Object.fromEntries(EVAL_CATEGORIES.map(c => [c.key, 0]));
-  const [scores, setScores]     = useState(blank);
-  const [remarks, setRemarks]   = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [err, setErr]           = useState("");
+  const [scores, setScores] = useState(blank);
+  const [remarks, setRemarks] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
   const [scoreErrs, setScoreErrs] = useState({});
 
   const total = EVAL_CATEGORIES.reduce((s, c) => s + (Number(scores[c.key]) || 0), 0);
@@ -90,9 +90,9 @@ function EvalModal({ team, judge, onClose, onSaved }) {
 
     const payload = {
       judge_id: judge.id,
-      team_id:  team.id,
+      team_id: team.id,
       batch_id: team.batch_id,
-      remarks:  remarks.trim() || null,
+      remarks: remarks.trim() || null,
       ...numericScores,
     };
 
@@ -200,10 +200,10 @@ function EvalModal({ team, judge, onClose, onSaved }) {
 // ── Eval form content (for page display) ──
 function EvalFormContent({ team, judge, onClose, onSaved }) {
   const blank = Object.fromEntries(EVAL_CATEGORIES.map(c => [c.key, 0]));
-  const [scores, setScores]     = useState(blank);
-  const [remarks, setRemarks]   = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [err, setErr]           = useState("");
+  const [scores, setScores] = useState(blank);
+  const [remarks, setRemarks] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
   const [scoreErrs, setScoreErrs] = useState({});
 
   const total = EVAL_CATEGORIES.reduce((s, c) => s + (Number(scores[c.key]) || 0), 0);
@@ -241,9 +241,9 @@ function EvalFormContent({ team, judge, onClose, onSaved }) {
 
     const payload = {
       judge_id: judge.id,
-      team_id:  team.id,
+      team_id: team.id,
       batch_id: team.batch_id,
-      remarks:  remarks.trim() || null,
+      remarks: remarks.trim() || null,
       ...numericScores,
     };
 
@@ -304,15 +304,14 @@ function EvalFormContent({ team, judge, onClose, onSaved }) {
 }
 
 // ── Main TeamList component ──
-export default function TeamList({ judge, onLogout }) {
-  const [teams, setTeams]         = useState([]);
-  const [batches, setBatches]     = useState([]);
-  const [evaluated, setEvaluated] = useState([]); // team_ids already scored
-  const [loading, setLoading]     = useState(true);
-  const [evalTeam, setEvalTeam]   = useState(null); // team being evaluated on page
-  const [filterBatch, setFilter]  = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all"); // all, pending, done
-  const [err, setErr]             = useState("");
+export default function TeamList({ judge, onLogout, autoOpenTeamId }) {
+  const [teams, setTeams] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [evaluated, setEvaluated] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [evalTeam, setEvalTeam] = useState(null);
+  const [filterBatch, setFilter] = useState("all");
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -325,8 +324,22 @@ export default function TeamList({ judge, onLogout }) {
       setTeams(t);
       setEvaluated(done);
       setLoading(false);
+
+      // Auto-open eval modal if came from QR scan
+      // Auto-open eval modal if came from QR scan — with batch guard
+      if (autoOpenTeamId && t.length) {
+        const match = t.find(tm => tm.id === autoOpenTeamId);
+        if (match) {
+          // Team is already filtered to this judge's batches — safe to open
+          setEvalTeam(match);
+        } else {
+          // Team exists but not in judge's batch
+          setErr(`Team ${autoOpenTeamId} is not assigned to your batch. Please scan the correct QR code.`);
+        }
+      }
     })();
-  }, [judge.id]);
+  }, [judge.id, autoOpenTeamId]);
+
 
   const handleLogout = async () => {
     await judgeLogout();
@@ -339,7 +352,7 @@ export default function TeamList({ judge, onLogout }) {
     let filtered = filterBatch === "all"
       ? teams
       : teams.filter(t => t.batch_id === filterBatch);
-    
+
     if (statusFilter === "pending") {
       filtered = filtered.filter(t => !evaluated.includes(t.id));
     } else if (statusFilter === "done") {
@@ -445,10 +458,10 @@ export default function TeamList({ judge, onLogout }) {
               </div>
             </div>
 
-            <EvalFormContent 
-              team={evalTeam} 
-              judge={judge} 
-              onClose={() => setEvalTeam(null)} 
+            <EvalFormContent
+              team={evalTeam}
+              judge={judge}
+              onClose={() => setEvalTeam(null)}
               onSaved={onSaved}
             />
           </div>
