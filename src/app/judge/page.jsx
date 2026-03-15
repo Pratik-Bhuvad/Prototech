@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
@@ -9,7 +9,7 @@ import { restoreJudgeSession } from "@/lib/judgeAuth";
 const JudgeLoginForm = dynamic(() => import("./(components)/LoginForm"), { ssr: false });
 const TeamList       = dynamic(() => import("./(components)/TeamList"),       { ssr: false });
 
-export default function JudgePage() {
+function JudgePageContent() {
     const router                    = useRouter();
     const searchParams              = useSearchParams();
     const [judge, setJudge]         = useState(null);
@@ -65,5 +65,17 @@ export default function JudgePage() {
                 : <JudgeLoginForm onLogin={handleLogin} pendingTeamId={targetTeam} />
             }
         </>
+    );
+}
+
+export default function JudgePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <span className="inline-block w-4 h-4 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+            </div>
+        }>
+            <JudgePageContent />
+        </Suspense>
     );
 }
