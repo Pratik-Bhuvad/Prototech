@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import { restoreJudgeSession } from "@/lib/judgeAuth";
@@ -11,16 +11,16 @@ const TeamList       = dynamic(() => import("./(components)/TeamList"),       { 
 
 export default function JudgePage() {
     const router                    = useRouter();
+    const searchParams              = useSearchParams();
     const [judge, setJudge]         = useState(null);
     const [checking, setChecking]   = useState(true);
     const [targetTeam, setTargetTeam] = useState(null); // team_id from QR scan
 
     // Read ?team= param from URL
     useEffect(() => {
-        if (!router.isReady) return;
-        const t = router.query.team || null;
+        const t = searchParams.get("team");
         if (t) setTargetTeam(t);
-    }, [router.isReady, router.query.team]);
+    }, [searchParams]);
 
     // Restore session
     useEffect(() => {
