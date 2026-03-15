@@ -1,0 +1,85 @@
+.bg-grid {
+    background-color: #ffffff;
+    background-image:
+        radial-gradient(ellipse 40% 40% at 50% 45%, rgba(220, 220, 233, 0.26) 0%, transparent 70%),
+        linear-gradient(rgba(0, 0, 0, 0.125) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.125) 1px, transparent 1px);
+    background-size: 100% 100%, 60px 60px, 60px 60px;
+    mask-image:
+        linear-gradient(90deg, transparent 0%, black 30%, black 70%, transparent 100%);
+}
+
+/* ── Fade-in keyframes ── */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-up {
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards;
+}
+
+.delay-1 {
+    animation-delay: 0.1s;
+}
+
+.delay-2 {
+    animation-delay: 0.25s;
+}
+
+.delay-3 {
+    animation-delay: 0.4s;
+}
+
+.delay-4 {
+    animation-delay: 0.55s;
+}
+
+.delay-5 {
+    animation-delay: 0.7s;
+}
+
+
+/* ── CTA primary ── */
+.btn-primary {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    background: #0a0a0a;
+    color: #fff;
+    padding: 14px 32px;
+    border: 1px solid #0a0a0a;
+    transition: background 0.18s, color 0.18s;
+}
+
+.btn-primary:hover {
+    background: #fff;
+    color: #0a0a0a;
+}
+
+/* ── CTA ghost ── */
+.btn-ghost {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    background: transparent;
+    font-weight: 700;
+    padding: 14px 32px;
+    border: 1px solid oklch(49.6% 0.265 301.924);
+    transition: border-color 0.18s, color 0.18s;
+}
+
+.btn-ghost:hover {
+    border-color: #0a0a0a;
+    color: #0a0a0a;
+}
