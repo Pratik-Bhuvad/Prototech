@@ -5,6 +5,7 @@ import { TABS } from "@/lib/constants";
 import TeamsTab from "./TeamsTab";
 import JudgesTab from "./JudgesTab";
 import BatchTab from "./BatchTab";
+import NotificationsTab from "./NotificationsTab";
 import ResultsTab from "./ResultsTab";
 
 export default function Dashboard({ onLogout }) {
@@ -66,9 +67,16 @@ export default function Dashboard({ onLogout }) {
           {activeTab === "teams" && <TeamsTab teams={teams} setTeams={setTeams} />}
           {activeTab === "judges" && <JudgesTab judges={judges} setJudges={setJudges} />}
           {activeTab === "batch" && <BatchTab judges={judges} />}
+          {activeTab === "notifications" && <NotificationsTab />}
           {activeTab === "results" && <ResultsTab />}
         </div>
       </main>
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

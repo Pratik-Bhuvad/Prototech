@@ -3,33 +3,56 @@ import { supabase } from "./supabase";
 
 const SESSION_KEY = "judge_session_token";
 
-// ── Login: match username + password, create session token ──
-export async function judgeLogin(username, password) {
+import {
+  // ...existing imports...
+  fetchEvaluationByJudgeAndTeam,
+} from "./db";
+
+// ── Create a new judge session with unique token ──
+export async function createJudgeSession(judgeId) {
+  // Generate a unique token
+  const token = crypto.randomUUID();
+
+  // Store in database
   const { data, error } = await supabase
-    .from("judges")
-    .select("*")
-    .eq("username", username.trim())
-    .eq("password", password)
-    .single();
-
-  if (error || !data) {
-    return { judge: null, error: "Invalid username or password." };
-  }
-
-  // Create session
-  const { data: session, error: sErr } = await supabase
     .from("judge_sessions")
-    .insert({ judge_id: data.id })
+    .insert([{ judge_id: judgeId, token }])
     .select()
     .single();
 
-  if (sErr || !session) {
-    return { judge: null, error: "Session creation failed. Try again." };
-  }
+  if (error) return { data: null, error };
+  return { data, error: null };
+}
 
-  // Persist token in localStorage
-  localStorage.setItem(SESSION_KEY, session.token);
-  return { judge: { ...data, displayName: data.display_name }, error: null };
+// Add this function:
+export async function fetchExistingEvaluation(judgeId, teamId) {
+  const { data, error } = await fetchEvaluationByJudgeAndTeam(judgeId, teamId);
+  if (error || !data) return null;
+  return data;
+}
+
+// ── Login: match username + password, create session token ──
+export async function judgeLogin(username, password) {
+    // Fetch by username only — never query by plaintext password
+    const { data, error } = await supabase
+        .from("judges")
+        .select("*")
+        .eq("username", username.trim())
+        .single();
+
+    if (error || !data) return { judge: null, error: "Invalid username or password." };
+
+    // Verify password against stored hash
+    const { verifyPassword } = await import("@/lib/hash");
+    const valid = await verifyPassword(password, data.password);
+    if (!valid) return { judge: null, error: "Invalid username or password." };
+
+    // Create session
+    const { data: session, error: sErr } = await createJudgeSession(data.id);
+    if (sErr || !session) return { judge: null, error: "Session creation failed. Try again." };
+
+    localStorage.setItem(SESSION_KEY, session.token);
+    return { judge: { ...data, displayName: data.display_name }, error: null };
 }
 
 // ── Restore session on page reload ──
@@ -76,7 +99,7 @@ export async function fetchJudgeTeams(judgeId) {
   // Get teams in those batches
   const { data: teams, error: tErr } = await supabase
     .from("teams")
-    .select("id, name, domain, batch_id")
+    .select("id, name, domain, batch_id, email")
     .in("batch_id", batchIds)
     .order("id");
 
@@ -128,12 +151,48 @@ export async function fetchJudgeEvaluations(judgeId) {
 }
 
 
-// ── Submit evaluation ──
+// ── Submit evaluation (one-time only, no updates allowed) ──
 export async function submitEvaluation(payload) {
-  // payload: { judge_id, team_id, batch_id, ...category scores, remarks }
+  // Always INSERT - prevent updates after submission
   const { error } = await supabase
     .from("evaluations")
-    .upsert(payload, { onConflict: "judge_id,team_id" });
+    .insert(payload);
+
+  // If duplicate key error, evaluation already exists
+  if (error?.code === "23505" || error?.message?.includes("duplicate")) {
+    return { error: "Your evaluation has already been submitted and cannot be updated." };
+  }
 
   return { error: error?.message || null };
+}
+
+// ── Send evaluation completion notification (no scores or judge details) ──
+export async function sendEvaluationEmail({ teamName, teamEmail }) {
+    console.log("🚀 sendEvaluationEmail function called with:", { teamName, teamEmail });
+    
+    // Skip silently if no email
+    if (!teamEmail) {
+        console.log("⚠️  No email provided, skipping");
+        return { error: null };
+    }
+
+    try {
+        console.log("📧 Sending evaluation email to:", teamEmail);
+        const res = await fetch("/api/evaluations/notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teamName, teamEmail }),
+        });
+        const json = await res.json();
+        console.log("📧 Notify response:", json);
+        if (!res.ok) {
+            console.error("📧 Notify failed:", json.error);
+            return { error: json.error };
+        }
+        console.log("✅ Email sent");
+        return { error: null };
+    } catch (err) {
+        console.error("❌ Email send error:", err.message);
+        return { error: err.message };
+    }
 }

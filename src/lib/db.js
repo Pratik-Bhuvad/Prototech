@@ -55,9 +55,11 @@ export const assignBatchToTeams = async (batchId, teamIds) => {
   return { error };
 };
 
-export const updateTeamsBatch = async (teamIds) => {
-  const { data, error } = await supabase.from("teams").select("id,name,batch_id").order("id");
-  return { data, error };
+export const updateTeamsBatch = async (teamIds, batchId) => {
+  const { error } = await supabase.from("teams").update({ batch_id: batchId }).in("id", teamIds);
+  if (error) return { data: null, error };
+  const { data, error: fetchError } = await supabase.from("teams").select("id,name,batch_id").order("id");
+  return { data, error: fetchError };
 };
 
 export const assignJudgeToBatch = async (batchId, judgeId) => {
@@ -117,3 +119,60 @@ export const setupAuthListener = (callback) => {
   });
   return subscription;
 };
+
+export async function fetchEvaluationByJudgeAndTeam(judgeId, teamId) {
+    const { data, error } = await supabase
+        .from("evaluations")
+        .select("*")
+        .eq("judge_id", judgeId)
+        .eq("team_id", teamId)
+        .single();
+    return { data, error };
+}
+
+export async function fetchEvaluationsAggregated() {
+    const { data, error } = await supabase
+        .from("evaluations")
+        .select(`
+            id,
+            remarks,
+            created_at,
+            problem_understanding,
+            approach_solution,
+            feasibility,
+            impact_innovation,
+            research_background,
+            presentation,
+            teams   ( id, name, domain, batch_id ),
+            judges  ( id, display_name, username ),
+            batches ( id, name )
+        `)
+        .order("created_at", { ascending: false });
+
+    return { data, error };
+}
+
+export async function fetchTotalTeamCount() {
+    const { count, error } = await supabase
+        .from("teams")
+        .select("*", { count: "exact", head: true });
+
+    return { count: count ?? 0, error };
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────────────────
+export async function fetchEvaluationNotifications() {
+    // Fetch all evaluations with team and judge info, sorted by creation date (newest first)
+    const { data, error } = await supabase
+        .from("evaluations")
+        .select(`
+            id,
+            created_at,
+            teams ( id, name, email, domain, batch_id ),
+            judges ( id, display_name, username ),
+            batches ( id, name )
+        `)
+        .order("created_at", { ascending: false });
+
+    return { data, error };
+}

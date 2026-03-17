@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",
+    "bcryptjs": "^3.0.3",
     "next": "16.1.6",
+    "nodemailer": "^8.0.2",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"

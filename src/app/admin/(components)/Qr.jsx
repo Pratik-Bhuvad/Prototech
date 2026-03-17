@@ -117,19 +117,19 @@ export function BulkQRModal({ batch, teams, onClose }) {
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
                 <style>
                     * { box-sizing: border-box; margin: 0; padding: 0; }
-                    body  { font-family: monospace; background: white; padding: 20px; }
-                    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-                    .card { border: 1px solid #ddd; padding: 16px; text-align: center; break-inside: avoid; }
-                    .header h2  { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-                    .header p   { font-size: 11px; color: #888; margin-bottom: 12px; }
-                    .qr-wrap    { display: flex; justify-content: center; margin-bottom: 10px; }
-                    small       { font-size: 9px; color: #bbb; word-break: break-all; }
-                    .toolbar    { margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+                    body  { font-family: monospace; background: white; padding: 40px 20px; }
+                    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; max-width: 210mm; margin: 0 auto; }
+                    .card { border: 1px solid #ddd; padding: 24px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+                    .header h2  { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+                    .header p   { font-size: 12px; color: #888; margin-bottom: 16px; }
+                    .qr-wrap    { display: flex; justify-content: center; margin-bottom: 16px; }
+                    small       { font-size: 10px; color: #bbb; word-break: break-all; }
+                    .toolbar    { margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
                     .toolbar strong { font-size: 14px; }
-                    .toolbar button { padding: 6px 16px; background: #111; color: #fff; border: none;
+                    .toolbar button { padding: 8px 16px; background: #111; color: #fff; border: none;
                                       cursor: pointer; font-family: monospace; font-size: 11px;
                                       text-transform: uppercase; letter-spacing: 0.1em; }
-                    @media print { .toolbar { display: none; } }
+                    @media print { body { padding: 20px; } .toolbar { display: none; } }
                 </style>
             </head>
             <body>

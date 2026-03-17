@@ -60,7 +60,7 @@ export default function BatchTab({ judges }) {
 
     const handleCreate = async () => {
         const teamIds = resolveTeamIds();
-        const e = validateBatchForm(form, teamIds);
+        const e = validate();
         if (Object.keys(e).length) { setErrors(e); return; }
         setSaving(true);
 
@@ -305,7 +305,7 @@ export default function BatchTab({ judges }) {
                                                     className="mono text-xs bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-600 px-2 py-0.5 transition-colors flex items-center gap-1"
                                                     title="Click to view QR code"
                                                 >
-                                                    <QrIcon /> {t.id} — {t.name}
+                                                    <QrIcon /> {t.id} — {t.name} {t.projectTitle && `(${t.projectTitle})`}
                                                 </button>
                                             ))
                                         )}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { getAdminSession, setupAuthListener } from "@/lib/db";
 import LoginForm from "./(components)/LoginForm";
 import Dashboard from "./(components)/Dashboard";

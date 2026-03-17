@@ -32,7 +32,7 @@ export default function TeamsTab({ teams, setTeams }) {
 
   const processFile = (file) => {
     setError("");
-    
+
     const fileValidation = validateCSVFile(file);
     if (fileValidation.error) {
       setError(fileValidation.error);
@@ -107,10 +107,9 @@ export default function TeamsTab({ teams, setTeams }) {
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
             className={`border-2 border-dashed cursor-pointer flex flex-col items-center justify-center gap-3 py-16 transition-all select-none
-              ${
-                status === "loading"
-                  ? "border-gray-200 bg-gray-50 pointer-events-none"
-                  : dragOver
+              ${status === "loading"
+                ? "border-gray-200 bg-gray-50 pointer-events-none"
+                : dragOver
                   ? "border-gray-900 bg-gray-50"
                   : "border-gray-200 hover:border-gray-400 hover:bg-gray-50/60"
               }`}
@@ -149,7 +148,7 @@ export default function TeamsTab({ teams, setTeams }) {
             <p className="mono text-xs text-gray-400 tracking-widest uppercase mb-2.5">
               Expected CSV format
             </p>
-            <code className="mono text-xs text-gray-500 block leading-6 whitespace-pre">{`id,name,domain\nT-001,ByteForge,AI / ML\nT-002,NovaSpark,Web3 / DeFi`}</code>
+            <code className="mono text-xs text-gray-500 block leading-6 whitespace-pre">{`id,name,domain,project title, email\nT-001,ByteForge,AI / ML,Project Title 1,leader@example.com\nT-002,NovaSpark,Web3 / DeFi,Project Title 2,nova@example.com`}</code>
           </div>
         </div>
       ) : (
@@ -174,15 +173,8 @@ export default function TeamsTab({ teams, setTeams }) {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {["Team ID", "Name", "Domain", "Batch", "Remove"].map((h, i) => (
-                  <th
-                    key={h}
-                    className={`mono text-xs text-gray-400 tracking-widest uppercase px-5 py-3 font-medium ${
-                      i === 4 ? "text-right" : "text-left"
-                    } ${i === 2 || i === 3 ? "hidden sm:table-cell" : ""}`}
-                  >
-                    {h}
-                  </th>
+                {["Team ID", "Name", "Domain", "Project Title", "Email", "Batch", "Remove"].map((h, i) => (
+                  <th key={h} className={`mono text-xs text-gray-400 tracking-widest uppercase px-5 py-3 font-medium ${i === 6 ? "text-right" : "text-left"} ${i === 2 || i === 3 || i === 4 || i === 5 ? "hidden sm:table-cell" : ""}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -196,26 +188,25 @@ export default function TeamsTab({ teams, setTeams }) {
                   <td className="mono text-xs text-gray-400 px-5 py-3.5">{t.id}</td>
                   <td className="px-5 py-3.5 syne text-sm font-semibold text-gray-900">{t.name}</td>
                   <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs">
-                      {t.domain}
-                    </span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs">{t.domain}</span>
                   </td>
                   <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
-                    {t.batch_id ? (
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs">
-                        {t.batch_id}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
+                    {t.projectTitle
+                      ? <span className="px-2 py-0.5 bg-green-50 text-green-600 text-xs">{t.projectTitle}</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
+                    {t.email
+                      ? <a href={`mailto:${t.email}`} className="hover:text-gray-900 transition-colors">{t.email}</a>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
+                    {t.batch_id
+                      ? <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs">{t.batch_id}</span>
+                      : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <button
-                      onClick={() => removeTeam(t.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <TrashIcon />
-                    </button>
+                    <button onClick={() => removeTeam(t.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"><TrashIcon /></button>
                   </td>
                 </tr>
               ))}

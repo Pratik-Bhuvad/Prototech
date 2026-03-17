@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { fetchJudges, createJudge, deleteJudge } from "@/lib/db";
 import { validateJudgeForm } from "@/lib/validation";
 import { TrashIcon } from "./Icons";
+const { hashPassword } = await import("@/lib/hash");
+import { supabase } from "@/lib/supabase";
 
 export default function JudgesTab({ judges, setJudges }) {
   const [form, setForm] = useState({ displayName: "", username: "", password: "" });
@@ -29,14 +31,16 @@ export default function JudgesTab({ judges, setJudges }) {
     }
 
     setSaving(true);
+    const hashed = await hashPassword(form.password);
+
     const newJudge = {
       id: `J-${String(judges.length + 1).padStart(3, "0")}`,
       display_name: form.displayName.trim(),
       username: form.username.trim(),
-      password: form.password,
+      password: hashed,
     };
+    const { error } = await supabase.from("judges").insert(newJudge);
 
-    const { error } = await createJudge(newJudge);
     if (error) {
       setErrors({ displayName: "Save failed: " + error.message });
       setSaving(false);
@@ -85,10 +89,9 @@ export default function JudgesTab({ judges, setJudges }) {
                   onChange={ch(key)}
                   placeholder={placeholder}
                   className={`w-full px-3 py-2.5 border text-sm text-gray-900 placeholder-gray-300 outline-none transition-all mono
-                    ${
-                      errors[key]
-                        ? "border-red-400 bg-red-50"
-                        : "border-gray-200 bg-gray-50 focus:border-gray-900 focus:bg-white"
+                    ${errors[key]
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-200 bg-gray-50 focus:border-gray-900 focus:bg-white"
                     }`}
                 />
                 {errors[key] && <p className="mono text-xs text-red-500 mt-1">✕ {errors[key]}</p>}
@@ -106,10 +109,9 @@ export default function JudgesTab({ judges, setJudges }) {
                 onChange={ch("password")}
                 placeholder="••••••••"
                 className={`w-full px-3 py-2.5 border text-sm text-gray-900 placeholder-gray-300 outline-none transition-all mono
-                  ${
-                    errors.password
-                      ? "border-red-400 bg-red-50"
-                      : "border-gray-200 bg-gray-50 focus:border-gray-900 focus:bg-white"
+                  ${errors.password
+                    ? "border-red-400 bg-red-50"
+                    : "border-gray-200 bg-gray-50 focus:border-gray-900 focus:bg-white"
                   }`}
               />
               {errors.password && (

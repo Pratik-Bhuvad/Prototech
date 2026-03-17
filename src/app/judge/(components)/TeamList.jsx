@@ -1,307 +1,8 @@
 // components/judge/TeamList.jsx
 import { useState, useEffect } from "react";
-import { fetchJudgeTeams, fetchJudgeEvaluations, submitEvaluation, judgeLogout, verifyTeamForJudge  } from "@/lib/judgeAuth";
+import { fetchJudgeTeams, fetchJudgeEvaluations, submitEvaluation, judgeLogout, verifyTeamForJudge } from "@/lib/judgeAuth";
 import { EVAL_CATEGORIES, TOTAL_MAX } from "@/lib/constants";
-
-// ── Score input row ──
-function ScoreRow({ cat, value, onChange, error }) {
-  const pct = Math.round((value / cat.max) * 100);
-
-  return (
-    <div className="border border-gray-100 bg-gray-50 px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <p className="mono text-xs text-gray-700">{cat.label}</p>
-          <p className="mono text-xs text-gray-400">Max {cat.max} pts</p>
-        </div>
-        {/* Number input */}
-        <div className="flex items-center gap-1.5">
-          <input
-            type="number"
-            min={0}
-            max={cat.max}
-            step={0.5}
-            value={value === "" ? "" : value}
-            onChange={e => {
-              const v = e.target.value;
-              if (v === "") { onChange(""); return; }
-              const n = parseFloat(v);
-              if (!isNaN(n)) onChange(Math.min(cat.max, Math.max(0, n)));
-            }}
-            onBlur={e => {
-              if (e.target.value === "") onChange(0);
-            }}
-            className={`w-16 px-2 py-1.5 text-center border text-sm font-bold text-gray-900 outline-none mono transition-all
-              ${error ? "border-red-400 bg-red-50" : "border-gray-200 bg-white focus:border-gray-900"}`}
-          />
-          <span className="mono text-xs text-gray-400">/{cat.max}</span>
-        </div>
-      </div>
-      {/* Progress fill */}
-      <div className="h-1 bg-gray-200 overflow-hidden">
-        <div
-          className="h-full transition-all duration-300"
-          style={{
-            width: `${pct}%`,
-            background: pct >= 80 ? "#16a34a" : pct >= 50 ? "#2563eb" : "#374151"
-          }}
-        />
-      </div>
-      {error && <p className="mono text-xs text-red-500 mt-1">✕ {error}</p>}
-    </div>
-  );
-}
-
-// ── Eval form modal ──
-function EvalModal({ team, judge, onClose, onSaved }) {
-  const blank = Object.fromEntries(EVAL_CATEGORIES.map(c => [c.key, 0]));
-  const [scores, setScores] = useState(blank);
-  const [remarks, setRemarks] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState("");
-  const [scoreErrs, setScoreErrs] = useState({});
-
-  const total = EVAL_CATEGORIES.reduce((s, c) => s + (Number(scores[c.key]) || 0), 0);
-
-  const validate = () => {
-    const e = {};
-    EVAL_CATEGORIES.forEach(cat => {
-      const v = scores[cat.key];
-      if (v === "" || v === null || v === undefined) {
-        e[cat.key] = "Required";
-      } else if (Number(v) > cat.max) {
-        e[cat.key] = `Max is ${cat.max}`;
-      } else if (Number(v) < 0) {
-        e[cat.key] = "Min is 0";
-      }
-    });
-    return e;
-  };
-
-  const handleSubmit = async () => {
-    const ve = validate();
-    if (Object.keys(ve).length) { setScoreErrs(ve); return; }
-    setSaving(true);
-    setErr("");
-
-    const numericScores = Object.fromEntries(
-      EVAL_CATEGORIES.map(c => [c.key, Number(scores[c.key])])
-    );
-
-    const payload = {
-      judge_id: judge.id,
-      team_id: team.id,
-      batch_id: team.batch_id,
-      remarks: remarks.trim() || null,
-      ...numericScores,
-    };
-
-    const { error } = await submitEvaluation(payload);
-    if (error) { setErr(error); setSaving(false); return; }
-    onSaved(team.id);
-    onClose();
-  };
-
-  const setScore = (key, val) => {
-    setScores(p => ({ ...p, [key]: val }));
-    setScoreErrs(p => ({ ...p, [key]: "" }));
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center px-4 py-6 overflow-y-auto"
-      style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
-    >
-      <div
-        className="bg-white border border-gray-200 w-full max-w-lg shadow-2xl my-auto"
-        style={{ animation: "fadeUp 0.2s ease both" }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <p className="syne text-base font-extrabold text-gray-900">{team.name}</p>
-            <p className="mono text-xs text-gray-400 mt-0.5">{team.id} · {team.batchName}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-300 hover:text-gray-900 text-2xl leading-none transition-colors">×</button>
-        </div>
-
-        {/* Total score banner */}
-        <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-          <p className="mono text-xs text-gray-400 tracking-widest uppercase">Total Score</p>
-          <div className="flex items-baseline gap-1">
-            <span
-              className="syne text-2xl font-extrabold"
-              style={{ color: total >= TOTAL_MAX * 0.8 ? "#16a34a" : total >= TOTAL_MAX * 0.5 ? "#2563eb" : "#111" }}
-            >
-              {total.toFixed(1)}
-            </span>
-            <span className="mono text-sm text-gray-400">/ {TOTAL_MAX}</span>
-          </div>
-        </div>
-
-        {/* Score inputs */}
-        <div className="px-6 py-5 space-y-3 border-b border-gray-100">
-          <p className="mono text-xs text-gray-400 tracking-widest uppercase mb-1">Category Scores</p>
-          {EVAL_CATEGORIES.map(cat => (
-            <ScoreRow
-              key={cat.key}
-              cat={cat}
-              value={scores[cat.key]}
-              onChange={v => setScore(cat.key, v)}
-              error={scoreErrs[cat.key]}
-            />
-          ))}
-        </div>
-
-        {/* Remarks */}
-        <div className="px-6 py-4 border-b border-gray-100">
-          <label className="mono block text-xs text-gray-500 tracking-widest uppercase mb-2">
-            Remarks <span className="normal-case text-gray-300">(optional)</span>
-          </label>
-          <textarea
-            value={remarks}
-            onChange={e => setRemarks(e.target.value)}
-            placeholder="Notes about this team's presentation, strengths, areas to improve..."
-            rows={3}
-            className="w-full px-3 py-2.5 border border-gray-200 bg-gray-50 focus:border-gray-900 focus:bg-white outline-none text-sm text-gray-700 mono resize-none transition-all"
-          />
-        </div>
-
-        {err && (
-          <div className="px-6 py-3 border-b border-gray-100 mono text-xs text-red-500">
-            ✕ {err}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="px-6 py-4 flex gap-2">
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="flex-1 py-3 bg-gray-900 text-white mono text-xs tracking-widest uppercase hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving
-              ? <><span className="inline-block w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />Submitting...</>
-              : "Submit Scores →"
-            }
-          </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-3 border border-gray-200 mono text-xs text-gray-500 tracking-widest uppercase hover:border-gray-400 transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Eval form content (for page display) ──
-function EvalFormContent({ team, judge, onClose, onSaved }) {
-  const blank = Object.fromEntries(EVAL_CATEGORIES.map(c => [c.key, 0]));
-  const [scores, setScores] = useState(blank);
-  const [remarks, setRemarks] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState("");
-  const [scoreErrs, setScoreErrs] = useState({});
-
-  const total = EVAL_CATEGORIES.reduce((s, c) => s + (Number(scores[c.key]) || 0), 0);
-
-  // Update total score display
-  useEffect(() => {
-    const elm = document.getElementById("evalTotalScore");
-    if (elm) elm.textContent = total.toFixed(1);
-  }, [total]);
-
-  const validate = () => {
-    const e = {};
-    EVAL_CATEGORIES.forEach(cat => {
-      const v = scores[cat.key];
-      if (v === "" || v === null || v === undefined) {
-        e[cat.key] = "Required";
-      } else if (Number(v) > cat.max) {
-        e[cat.key] = `Max is ${cat.max}`;
-      } else if (Number(v) < 0) {
-        e[cat.key] = "Min is 0";
-      }
-    });
-    return e;
-  };
-
-  const handleSubmit = async () => {
-    const ve = validate();
-    if (Object.keys(ve).length) { setScoreErrs(ve); return; }
-    setSaving(true);
-    setErr("");
-
-    const numericScores = Object.fromEntries(
-      EVAL_CATEGORIES.map(c => [c.key, Number(scores[c.key])])
-    );
-
-    const payload = {
-      judge_id: judge.id,
-      team_id: team.id,
-      batch_id: team.batch_id,
-      remarks: remarks.trim() || null,
-      ...numericScores,
-    };
-
-    const { error } = await submitEvaluation(payload);
-    if (error) { setErr(error); setSaving(false); return; }
-    onSaved(team.id);
-    onClose();
-  };
-
-  const setScore = (key, val) => {
-    setScores(p => ({ ...p, [key]: val }));
-    setScoreErrs(p => ({ ...p, [key]: "" }));
-  };
-
-  return (
-    <>
-      {/* Score inputs */}
-      <div className="px-6 py-5 space-y-3 border-b border-gray-100">
-        <p className="mono text-xs text-gray-400 tracking-widest uppercase mb-1">Category Scores</p>
-        {EVAL_CATEGORIES.map(cat => (
-          <ScoreRow
-            key={cat.key}
-            cat={cat}
-            value={scores[cat.key]}
-            onChange={v => setScore(cat.key, v)}
-            error={scoreErrs[cat.key]}
-          />
-        ))}
-      </div>
-
-      {err && (
-        <div className="px-6 py-3 border-b border-gray-100 mono text-xs text-red-500">
-          ✕ {err}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="px-6 py-4 flex gap-2">
-        <button
-          onClick={handleSubmit}
-          disabled={saving}
-          className="flex-1 py-3 bg-gray-900 text-white mono text-xs tracking-widest uppercase hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {saving
-            ? <><span className="inline-block w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />Submitting...</>
-            : "Submit Scores →"
-          }
-        </button>
-        <button
-          onClick={onClose}
-          className="px-5 py-3 border border-gray-200 mono text-xs text-gray-500 tracking-widest uppercase hover:border-gray-400 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-    </>
-  );
-}
+import EvalPanel from "./EvalPanel";
 
 // ── Main TeamList component ──
 export default function TeamList({ judge, onLogout, autoOpenTeamId }) {
@@ -434,38 +135,28 @@ export default function TeamList({ judge, onLogout, autoOpenTeamId }) {
 
         {/* Show evaluation form on page or teams list */}
         {evalTeam ? (
-          <div className="border border-gray-200 bg-white" style={{ animation: "fadeUp 0.2s ease both" }}>
-            {/* Eval form header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div>
-                <p className="syne text-base font-extrabold text-gray-900">{evalTeam.name}</p>
-                <p className="mono text-xs text-gray-400 mt-0.5">{evalTeam.id} · {evalTeam.batchName}</p>
-              </div>
-              <button onClick={() => setEvalTeam(null)} className="text-gray-300 hover:text-gray-900 text-2xl leading-none transition-colors">×</button>
+          <>
+            <div className="flex items-center gap-2 mb-4" style={{ animation: "fadeUp 0.2s ease both" }}>
+              <button
+                onClick={() => setEvalTeam(null)}
+                className="mono text-xs text-gray-400 hover:text-gray-900 tracking-widest uppercase flex items-center gap-1.5 transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+                </svg>
+                Back to Teams
+              </button>
+              <span className="mono text-xs text-gray-300">/</span>
+              <span className="mono text-xs text-gray-500">{evalTeam.name}</span>
             </div>
-
-            {/* Total score banner */}
-            <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-              <p className="mono text-xs text-gray-400 tracking-widest uppercase">Total Score</p>
-              <div className="flex items-baseline gap-1">
-                <span
-                  className="syne text-2xl font-extrabold"
-                  id="evalTotalScore"
-                  style={{ color: "#111" }}
-                >
-                  0.0
-                </span>
-                <span className="mono text-sm text-gray-400">/ {TOTAL_MAX}</span>
-              </div>
-            </div>
-
-            <EvalFormContent
+            <EvalPanel
               team={evalTeam}
               judge={judge}
               onClose={() => setEvalTeam(null)}
               onSaved={onSaved}
+              isEdit={evaluated.includes(evalTeam.id)}
             />
-          </div>
+          </>
         ) : (
           <>
             {/* Empty state */}
@@ -488,11 +179,11 @@ export default function TeamList({ judge, onLogout, autoOpenTeamId }) {
 
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Status dot */}
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${done ? "bg-emerald-500" : "bg-gray-300"}`} />
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${done ? "bg-emerald-500" : "bg-gray-300"}`} />
 
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="mono text-xs text-gray-400 flex-shrink-0">{team.id}</span>
+                          <span className="mono text-xs text-gray-400 shrink-0">{team.id}</span>
                           <span className="syne text-sm font-bold text-gray-900 truncate">{team.name}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -505,14 +196,15 @@ export default function TeamList({ judge, onLogout, autoOpenTeamId }) {
                     </div>
 
                     <button
-                      onClick={() => setEvalTeam(team)}
-                      className={`flex-shrink-0 ml-4 mono text-xs tracking-widest uppercase px-4 py-2 border transition-colors
+                      onClick={() => !done && setEvalTeam(team)}
+                      disabled={done}
+                      className={`shrink-0 ml-4 mono text-xs tracking-widest uppercase px-4 py-2 border transition-colors
                         ${done
-                          ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                          ? "border-gray-700 text-gray-700 opacity-50 cursor-not-allowed"
                           : "border-gray-900 bg-gray-900 text-white hover:bg-black"
                         }`}
                     >
-                      {done ? "Edit Scores" : "Evaluate →"}
+                      {done ? "Evaluated" : "Evaluate →"}
                     </button>
                   </div>
                 );
