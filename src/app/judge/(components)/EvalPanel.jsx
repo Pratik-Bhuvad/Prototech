@@ -244,8 +244,13 @@ export default function EvalPanel({ team, judge, onClose, onSaved, isEdit }) {
         };
 
         const { error } = await submitEvaluation(payload);
-        if (error) { setErr(error); setSaving(false); return; }
+        if (error) {
+            setErr(error);
+            setSaving(false);
+            return;
+        }
 
+        // Only send email after DB save succeeds
         console.log("🎯 Calling sendEvaluationEmail for team:", team.name, "email:", team.email);
         const emailResult = await sendEvaluationEmail({
             teamName: team.name,
