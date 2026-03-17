@@ -54,6 +54,7 @@ export const parseCSV = (text) => {
         domain: obj.domain || obj["track"] || obj["category"] || "",
         projecttitle: obj.title || obj["project title"] || "",
         email: obj.email || obj["team email"] || obj["leader email"] || "",
+        college: obj.college || "",
         batch_id: null,
       };
     })

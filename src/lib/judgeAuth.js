@@ -86,13 +86,19 @@ export async function judgeLogout() {
 
 // ── Fetch teams assigned to this judge's batches ──
 export async function fetchJudgeTeams(judgeId) {
-  // Get batches assigned to this judge
-  const { data: batches, error: bErr } = await supabase
+  // Get all batches
+  const { data: allBatches, error: bErr } = await supabase
     .from("batches")
-    .select("id, name")
-    .eq("judge_id", judgeId);
+    .select("id, name, judge_ids");
 
-  if (bErr || !batches?.length) return { batches: [], teams: [], error: bErr?.message || null };
+  if (bErr) return { batches: [], teams: [], error: bErr.message };
+
+  // Filter batches where this judge is assigned
+  const batches = allBatches.filter(b => 
+    Array.isArray(b.judge_ids) && b.judge_ids.includes(judgeId)
+  );
+
+  if (!batches?.length) return { batches: [], teams: [], error: null };
 
   const batchIds = batches.map(b => b.id);
 
@@ -114,13 +120,19 @@ export async function fetchJudgeTeams(judgeId) {
 
 // ── Verify a scanned team belongs to this judge's batches ──
 export async function verifyTeamForJudge(judgeId, teamId) {
-  // Get judge's batch ids
-  const { data: batches, error: bErr } = await supabase
+  // Get all batches
+  const { data: allBatches, error: bErr } = await supabase
     .from("batches")
-    .select("id")
-    .eq("judge_id", judgeId);
+    .select("id, judge_ids");
 
-  if (bErr || !batches?.length) return { allowed: false, reason: "No batches assigned to you." };
+  if (bErr) return { allowed: false, reason: "Error fetching batches." };
+
+  // Filter batches where this judge is assigned
+  const batches = allBatches.filter(b => 
+    Array.isArray(b.judge_ids) && b.judge_ids.includes(judgeId)
+  );
+
+  if (!batches?.length) return { allowed: false, reason: "No batches assigned to you." };
 
   const batchIds = batches.map(b => b.id);
 

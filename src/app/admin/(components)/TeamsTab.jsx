@@ -148,7 +148,7 @@ export default function TeamsTab({ teams, setTeams }) {
             <p className="mono text-xs text-gray-400 tracking-widest uppercase mb-2.5">
               Expected CSV format
             </p>
-            <code className="mono text-xs text-gray-500 block leading-6 whitespace-pre">{`id,name,domain,project title, email\nT-001,ByteForge,AI / ML,Project Title 1,leader@example.com\nT-002,NovaSpark,Web3 / DeFi,Project Title 2,nova@example.com`}</code>
+            <code className="mono text-xs text-gray-500 block leading-6 whitespace-pre">{`id,name,college,domain,project title,email\nT-001,ByteForge,MIT,AI / ML,Project Title 1,leader@example.com\nT-002,NovaSpark,Stanford,Web3 / DeFi,Project Title 2,nova@example.com`}</code>
           </div>
         </div>
       ) : (
@@ -173,8 +173,8 @@ export default function TeamsTab({ teams, setTeams }) {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {["Team ID", "Name", "Domain", "Project Title", "Email", "Batch", "Remove"].map((h, i) => (
-                  <th key={h} className={`mono text-xs text-gray-400 tracking-widest uppercase px-5 py-3 font-medium ${i === 6 ? "text-right" : "text-left"} ${i === 2 || i === 3 || i === 4 || i === 5 ? "hidden sm:table-cell" : ""}`}>{h}</th>
+                {["Name", "Domain", "Project Title", "Remove"].map((h, i) => (
+                  <th key={h} className={`mono text-xs text-gray-400 tracking-widest uppercase px-5 py-3 font-medium ${i === 3 ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -185,24 +185,13 @@ export default function TeamsTab({ teams, setTeams }) {
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                   style={{ animation: `fadeUp 0.2s ease ${i * 0.025}s both` }}
                 >
-                  <td className="mono text-xs text-gray-400 px-5 py-3.5">{t.id}</td>
                   <td className="px-5 py-3.5 syne text-sm font-semibold text-gray-900">{t.name}</td>
-                  <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
+                  <td className="mono text-xs text-gray-500 px-5 py-3.5">
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs">{t.domain}</span>
                   </td>
-                  <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
-                    {t.projectTitle
-                      ? <span className="px-2 py-0.5 bg-green-50 text-green-600 text-xs">{t.projectTitle}</span>
-                      : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
-                    {t.email
-                      ? <a href={`mailto:${t.email}`} className="hover:text-gray-900 transition-colors">{t.email}</a>
-                      : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="mono text-xs text-gray-500 px-5 py-3.5 hidden sm:table-cell">
-                    {t.batch_id
-                      ? <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs">{t.batch_id}</span>
+                  <td className="mono text-xs text-gray-500 px-5 py-3.5">
+                    {t.projecttitle
+                      ? <span className="px-2 py-0.5 bg-green-50 text-green-600 text-xs">{t.projecttitle}</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-5 py-3.5 text-right">

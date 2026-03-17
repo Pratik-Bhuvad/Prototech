@@ -109,9 +109,22 @@ export default function ResultsTab() {
       const total = parseFloat(
         EVAL_CATEGORIES.reduce((s, c) => s + avgs[c.key], 0).toFixed(1)
       );
-      return { ...entry, avgs, total };
+      // Calculate highest individual judge score
+      let highestJudgeScore = 0;
+      entry.rows.forEach(r => {
+        const judgeTotal = EVAL_CATEGORIES.reduce(
+          (s, c) => s + Number(r[c.key] || 0), 0
+        );
+        if (judgeTotal > highestJudgeScore) highestJudgeScore = judgeTotal;
+      });
+      return { ...entry, avgs, total, highestJudgeScore };
     })
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => {
+      // Sort by average (total) descending
+      if (b.total !== a.total) return b.total - a.total;
+      // Tiebreaker: highest individual judge score
+      return b.highestJudgeScore - a.highestJudgeScore;
+    });
 
   // ── Insight counts ──────────────────────────────────────────
   const evaluatedTeams = aggregated.length;
@@ -215,8 +228,8 @@ export default function ResultsTab() {
                   <div className="px-4 py-4 min-w-0">
                     <p className="syne text-sm font-bold text-gray-900 truncate">{entry.team.name}</p>
                     <p className="mono text-xs text-gray-400 mt-0.5 truncate">{entry.team.domain}</p>
-                    {entry.team.projectTitle && (
-                      <p className="mono text-xs text-green-600 mt-0.5 truncate bg-green-50 px-1.5 py-0.5 inline-block">{entry.team.projectTitle}</p>
+                    {entry.team.projecttitle && (
+                      <p className="mono text-xs text-green-600 mt-0.5 truncate bg-green-50 px-1.5 py-0.5 inline-block">{entry.team.projecttitle}</p>
                     )}
                   </div>
 

@@ -36,7 +36,14 @@ export const deleteJudge = async (judgeId) => {
 
 // ─── BATCHES ────────────────────────────────────────────────────
 export const fetchBatches = async () => {
-  const { data, error } = await supabase.from("batches").select("*").order("id");
+  const { data, error } = await supabase.from("batches").select("id, name, judge_ids").order("id");
+  // Ensure judge_ids is always an array
+  if (data) {
+    data.forEach(b => {
+      b.judge_ids = Array.isArray(b.judge_ids) ? b.judge_ids : [];
+    });
+  }
+  if (error) console.error("Error fetching batches:", error);
   return { data, error };
 };
 
@@ -46,6 +53,7 @@ export const fetchTeamsWithBatch = async () => {
 };
 
 export const createBatch = async (batchData) => {
+  // Accepts judge_ids array
   const { error } = await supabase.from("batches").insert(batchData);
   return { error };
 };
@@ -62,8 +70,15 @@ export const updateTeamsBatch = async (teamIds, batchId) => {
   return { data, error: fetchError };
 };
 
-export const assignJudgeToBatch = async (batchId, judgeId) => {
-  const { error } = await supabase.from("batches").update({ judge_id: judgeId || null }).eq("id", batchId);
+export const assignJudgesToBatch = async (batchId, judgeIds) => {
+  // judgeIds: array of judge UUIDs
+  console.log("Updating batch", batchId, "with judges", judgeIds);
+  const { error } = await supabase.from("batches").update({ judge_ids: judgeIds }).eq("id", batchId);
+  if (error) {
+    console.error("Error updating judges for batch", batchId, error);
+  } else {
+    console.log("Successfully updated batch", batchId);
+  }
   return { error };
 };
 

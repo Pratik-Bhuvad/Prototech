@@ -8,7 +8,7 @@ import {
     createBatch,
     assignBatchToTeams,
     updateTeamsBatch,
-    assignJudgeToBatch,
+    assignJudgesToBatch,
     deleteBatch,
 } from "@/lib/db";
 import { validateBatchForm } from "@/lib/validation";
@@ -67,7 +67,7 @@ export default function BatchTab({ judges }) {
         const newBatch = {
             id: `B-${String(batches.length + 1).padStart(3, "0")}`,
             name: form.name.trim(),
-            judge_id: null,
+            judge_ids: [], // Start with no judges assigned
         };
 
         const { error: bErr } = await createBatch(newBatch);
@@ -97,9 +97,14 @@ export default function BatchTab({ judges }) {
     };
 
 
-    const assignJudge = async (batchId, judgeId) => {
-        await assignJudgeToBatch(batchId, judgeId);
-        setBatches((p) => p.map((b) => (b.id === batchId ? { ...b, judge_id: judgeId } : b)));
+    // Assign up to 2 judges to a batch
+    const assignJudges = async (batchId, judgeIds) => {
+        const { error } = await assignJudgesToBatch(batchId, judgeIds);
+        if (error) {
+            console.error("Failed to assign judges:", error);
+            return;
+        }
+        setBatches((p) => p.map((b) => (b.id === batchId ? { ...b, judge_ids: judgeIds } : b)));
     };
 
     const removeBatch = async (id) => {
@@ -259,7 +264,7 @@ export default function BatchTab({ judges }) {
                     <div className="space-y-3">
                         {batches.map((b, i) => {
                             const batchTeams = teams.filter(t => t.batch_id === b.id);
-                            const assignedJudge = judges.find(j => j.id === b.judge_id);
+                            const assignedJudges = Array.isArray(b.judge_ids) ? b.judge_ids.map(jid => judges.find(j => j.id === jid)).filter(Boolean) : [];
 
                             return (
                                 <div
@@ -305,32 +310,55 @@ export default function BatchTab({ judges }) {
                                                     className="mono text-xs bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-600 px-2 py-0.5 transition-colors flex items-center gap-1"
                                                     title="Click to view QR code"
                                                 >
-                                                    <QrIcon /> {t.id} — {t.name} {t.projectTitle && `(${t.projectTitle})`}
+                                                    <QrIcon /> {t.id} — {t.name} {t.projecttitle && `(${t.projecttitle})`}
                                                 </button>
                                             ))
                                         )}
                                     </div>
 
-                                    {/* Judge assignment dropdown */}
-                                    <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                                        <span className="mono text-xs text-gray-400 tracking-widest uppercase flex-shrink-0">Judge</span>
-                                        <select
-                                            value={b.judge_id || ""}
-                                            onChange={e => assignJudge(b.id, e.target.value)}
-                                            className="flex-1 mono text-xs text-gray-700 border border-gray-200 bg-gray-50 px-2.5 py-1.5 outline-none focus:border-gray-900 transition-colors"
-                                        >
-                                            <option value="">— Assign a judge —</option>
-                                            {judges.length === 0
-                                                ? <option disabled>No judges yet — create in Judges tab</option>
-                                                : judges.map(j => (
+                                    {/* Judge assignment chips and dropdown */}
+                                    <div className="pt-3 border-t border-gray-100">
+                                        <span className="mono text-xs text-gray-400 tracking-widest uppercase flex-shrink-0 block mb-2">Assigned Judges:</span>
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {assignedJudges.map(j => (
+                                                <span key={j.id} className="inline-flex items-center bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
+                                                    {j.displayName || j.display_name}
+                                                    <button
+                                                        type="button"
+                                                        className="ml-2 text-purple-400 hover:text-purple-700 focus:outline-none"
+                                                        onClick={() => {
+                                                            const newIds = (b.judge_ids || []).filter(id => id !== j.id);
+                                                            assignJudges(b.id, newIds);
+                                                        }}
+                                                        aria-label="Remove judge"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        {(b.judge_ids?.length ?? 0) < 2 && (
+                                            <select
+                                                value=""
+                                                onChange={e => {
+                                                    const selectedId = e.target.value;
+                                                    const currentIds = b.judge_ids || [];
+                                                    console.log("Selected judge:", selectedId, "Current IDs:", currentIds);
+                                                    if (selectedId && !currentIds.includes(selectedId)) {
+                                                        const newIds = [...currentIds, selectedId].slice(0, 2);
+                                                        console.log("New IDs to assign:", newIds);
+                                                        assignJudges(b.id, newIds);
+                                                    }
+                                                }}
+                                                className="mono text-xs text-gray-700 border border-gray-200 bg-gray-50 px-2.5 py-1.5 outline-none focus:border-gray-900 transition-colors"
+                                            >
+                                                <option value="">+ Assign Judge</option>
+                                                {judges.filter(j => !(b.judge_ids || []).includes(j.id)).map(j => (
                                                     <option key={j.id} value={j.id}>
-                                                        {j.displayName || j.display_name} (@{j.username})
+                                                        {j.displayName || j.display_name}
                                                     </option>
-                                                ))
-                                            }
-                                        </select>
-                                        {assignedJudge && (
-                                            <span className="mono text-xs text-emerald-600 flex-shrink-0">✓ Assigned</span>
+                                                ))}
+                                            </select>
                                         )}
                                     </div>
                                 </div>
