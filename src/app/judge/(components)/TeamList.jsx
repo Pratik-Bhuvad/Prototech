@@ -1,7 +1,6 @@
 // components/judge/TeamList.jsx
 import { useState, useEffect } from "react";
 import { fetchJudgeTeams, fetchJudgeEvaluations, submitEvaluation, judgeLogout, verifyTeamForJudge } from "@/lib/judgeAuth";
-import { EVAL_CATEGORIES, TOTAL_MAX } from "@/lib/constants";
 import EvalPanel from "./EvalPanel";
 
 // ── Main TeamList component ──

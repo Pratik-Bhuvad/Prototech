@@ -336,27 +336,6 @@ export default function EvalPanel({ team, judge, onClose, onSaved, isEdit }) {
                     ))}
                 </div>
 
-                {/* ── Remarks ── */}
-                <div className="px-6 py-4 border-t border-gray-200">
-                    <label className="mono block text-xs text-gray-500 tracking-widest uppercase mb-2">
-                        Remarks <span className="normal-case text-gray-300">(optional)</span>
-                    </label>
-                    <textarea
-                        value={remarks}
-                        onChange={e => {
-                            if (!isEdit) setRemarks(e.target.value);
-                        }}
-                        disabled={isEdit}
-                        placeholder={isEdit ? "Your evaluation has been submitted and locked." : "Notes about this team's presentation, strengths, areas to improve..."}
-                        rows={3}
-                        className={`w-full px-3 py-2.5 border border-gray-200 outline-none text-sm mono resize-none transition-all ${
-                            isEdit
-                                ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-100"
-                                : "bg-gray-50 focus:border-gray-900 focus:bg-white text-gray-700"
-                        }`}
-                    />
-                </div>
-
                 {/* ── Error ── */}
                 {err && (
                     <div className="px-6 py-3 border-t border-gray-100 mono text-xs text-red-500">

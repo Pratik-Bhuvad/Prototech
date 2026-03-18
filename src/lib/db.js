@@ -100,8 +100,8 @@ export const fetchEvaluations = async () => {
     .from("evaluations")
     .select(`
       id, remarks, created_at,
-      problem_understanding, approach_solution,
-      feasibility, impact_innovation, research_background,
+      introduction, objectives,
+      implementation, results, implication,
       teams   ( id, name, domain, batch_id ),
       judges  ( id, display_name, username ),
       batches ( id, name )
@@ -152,12 +152,11 @@ export async function fetchEvaluationsAggregated() {
             id,
             remarks,
             created_at,
-            problem_understanding,
-            approach_solution,
-            feasibility,
-            impact_innovation,
-            research_background,
-            presentation,
+            introduction,
+            objectives,
+            implementation,
+            results,
+            implication,
             teams   ( id, name, domain, batch_id ),
             judges  ( id, display_name, username ),
             batches ( id, name )
